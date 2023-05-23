@@ -1,22 +1,14 @@
-import urllib3
 import datetime
+import requests
 from bs4 import BeautifulSoup
 
-http = urllib3.PoolManager()
 
-# 식단 주소
-lunch_menu_url = ""
-# 텔레그램 봇 토큰
-bot_token = ""
-# 텔레그램 챗 아이디
-chat_id = ""
-
-
-# 식단 크롤링
-def lunch_menu(menu_url):
-    response = http.request('GET', menu_url)
+# 메뉴 크롤링
+def crawling(url, num):
+    response = requests.get(f'{url}{num}')
+    html = response.content
+    soup = BeautifulSoup(html, "html.parser")
     today = datetime.datetime.today().weekday() + 2
-    soup = BeautifulSoup(response.data, "html.parser")
 
     if today >= 5:
         exit()
@@ -25,16 +17,31 @@ def lunch_menu(menu_url):
     else:
         ul = soup.select_one(f"tr:nth-child(1) td:nth-child({today}) ul")
 
-    return "\n".join([li.text.strip() for li in ul.select("li")])
+    menu_text = "\n".join(li.text.strip() for li in ul.select("li"))
+    return menu_text
 
 
-# 텔레그램 메세지 전송
-def telegram():
-    lunch_menu_1 = lunch_menu(f"{lunch_menu_url}(식단번호)")
-    lunch_menu_2 = lunch_menu(f"{lunch_menu_url}(식단번호)")
-    date = f"{datetime.datetime.now():%Y-%m-%d}\n\n"
-    result = f"{date}식단1\n{'-'*20}\n{lunch_menu_1}\n{'-'*20}\n\n식단2\n{'-'*20}\n{lunch_menu_2}\n{'-'*20}\n"
-    url = f"https://api.telegram.org/bot{bot_token}/sendmessage?chat_id={chat_id}&text={result}"
-    http.request('GET', url)
+# 디스코드 웹훅
+def webhook(webhook_url, name, menu):
+    payload = {
+        "embeds": [
+            {
+                "title": name,
+                "description": menu
+            }
+        ]  
+    }
+    requests.post(webhook_url, json=payload)
 
-telegram()
+
+# AWS Lambda Handler
+def lambda_handler(event, context):
+    menu_url = "학식 URL"
+    discord_webhook_url = "Webhook URL"
+    webhook(discord_webhook_url, "메뉴 1", crawling(menu_url, "메뉴번호"))
+    webhook(discord_webhook_url, "메뉴 2", crawling(menu_url, "메뉴번호"))
+
+
+# 메인 함수
+if __name__ == "__main__":
+    lambda_handler(None, None)

@@ -8,16 +8,13 @@ def crawling(url, num):
     response = requests.get(f'{url}{num}')
     html = response.content
     soup = BeautifulSoup(html, "html.parser")
-    today = datetime.datetime.today().weekday() + 2
+    today = datetime.today().weekday()
 
-    if today >= 5:
-        exit()
-    elif today == 0:
-        ul = soup.select_one("ul.foodList")
-    else:
-        ul = soup.select_one(f"tr:nth-child(1) td:nth-child({today}) ul")
+    food_lists = soup.find_all('ul', class_='foodList')
 
-    menu_text = "\n".join(li.text.strip() for li in ul.select("li"))
+    menu_text = food_lists[today].text.replace('\n', '')
+    menu_text = menu_text.replace('\r', '\n')
+
     return menu_text
 
 
